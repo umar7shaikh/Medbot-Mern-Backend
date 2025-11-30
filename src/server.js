@@ -16,6 +16,13 @@ import { requestLogger } from "./middlewares/requestLogger.js";
 import logger from "./utils/logger.js";
 import voiceRoutes from "./routes/voiceRoutes.js";
 
+import appointmentRoutes from "./routes/appointmentRoutes.js";
+import doctorRoutes from "./routes/doctorRoutes.js";
+
+import medicationRoutes from "./routes/medicationRoutes.js";
+
+
+
 
 const app = express();
 
@@ -40,6 +47,13 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/voice", voiceRoutes);
+app.use("/api/appointments", appointmentRoutes);
+app.use("/api/doctors", doctorRoutes);
+app.use("/api/medications", medicationRoutes);
+
+
+
+
 
 
 // Health check route

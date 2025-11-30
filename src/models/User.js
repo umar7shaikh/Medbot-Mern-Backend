@@ -14,11 +14,26 @@ const userSchema = new mongoose.Schema(
     },
     password: { type: String, required: true, minlength: 6 },
     preferredLanguage: { type: String, default: "en" },
+
+    // NEW: role-based access
+    role: {
+      type: String,
+      enum: ["patient", "doctor", "admin"],
+      default: "patient",
+    },
+
+    // Optional: doctor-specific status and basic profile fields
+    doctorStatus: {
+      type: String,
+      enum: ["none", "pending", "approved", "rejected"],
+      default: "none",
+    },
+    specialization: { type: String, trim: true },
+    clinicName: { type: String, trim: true },
   },
   { timestamps: true }
 );
 
-// remove pre-save hook to avoid next() issue
 // hash password manually in controller
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
