@@ -1,16 +1,24 @@
 // src/controllers/authController.js
 import bcrypt from "bcryptjs";
+import validator from "validator"; // <‑ add this
 import { User } from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, preferredLanguage } = req.body;
+    const { name, email, password, preferredLanguage, role } = req.body;
 
     if (!name || !email || !password) {
       return res
         .status(400)
         .json({ message: "Name, email, and password are required" });
+    }
+
+    // NEW: validate email format
+    if (!validator.isEmail(email)) {
+      return res
+        .status(400)
+        .json({ message: "Please provide a valid email address" });
     }
 
     const existing = await User.findOne({ email });
@@ -26,6 +34,8 @@ export const register = async (req, res) => {
       email,
       password: hashedPassword,
       preferredLanguage: preferredLanguage || "en",
+      role: role === "doctor" ? "doctor" : "patient",
+      doctorStatus: role === "doctor" ? "approved" : "none",
     });
 
     const token = generateToken(user);
@@ -36,6 +46,8 @@ export const register = async (req, res) => {
         name: user.name,
         email: user.email,
         preferredLanguage: user.preferredLanguage,
+        role: user.role,
+        doctorStatus: user.doctorStatus,
       },
       token,
     });
@@ -53,6 +65,13 @@ export const login = async (req, res) => {
       return res
         .status(400)
         .json({ message: "Email and password are required" });
+    }
+
+    // validate email format
+    if (!validator.isEmail(email)) {
+      return res
+        .status(400)
+        .json({ message: "Please provide a valid email address" });
     }
 
     const user = await User.findOne({ email });
@@ -73,6 +92,8 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         preferredLanguage: user.preferredLanguage,
+        role: user.role,
+        doctorStatus: user.doctorStatus,
       },
       token,
     });

@@ -1,16 +1,64 @@
 // src/controllers/doctorController.js
 import { DoctorAvailability } from "../models/DoctorAvailability.js";
 import { Appointment } from "../models/Appointment.js";
+import { User } from "../models/User.js";
 
 // ensure user has doctor role
 const ensureDoctor = (user) => user.role === "doctor";
+
+// NEW: GET /api/doctors/me/availability
+export const getMyAvailability = async (req, res) => {
+  try {
+    if (!ensureDoctor(req.user)) {
+      return res
+        .status(403)
+        .json({ message: "Only doctors can view availability" });
+    }
+
+    const doc = await DoctorAvailability.findOne({ doctor: req.user._id });
+
+    // If not set yet, return an empty structure so frontend has sane defaults
+    if (!doc) {
+      return res.json({
+        doctor: req.user._id,
+        slotDurationMinutes: 30,
+        days: [],
+      });
+    }
+
+    return res.json(doc);
+  } catch (err) {
+    console.error("Get my availability error:", err.message);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// GET /api/doctors
+// List all approved doctors for booking
+export const getDoctors = async (req, res) => {
+  try {
+    const doctors = await User.find({
+      role: "doctor",
+      doctorStatus: "approved", // only show approved doctors
+    })
+      .select("name email specialization clinicName")
+      .sort({ name: 1 });
+
+    return res.json(doctors);
+  } catch (err) {
+    console.error("Get doctors error:", err.message);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 // doctor sets or replaces their weekly availability
 // POST /api/doctors/me/availability
 export const upsertMyAvailability = async (req, res) => {
   try {
     if (!ensureDoctor(req.user)) {
-      return res.status(403).json({ message: "Only doctors can set availability" });
+      return res
+        .status(403)
+        .json({ message: "Only doctors can set availability" });
     }
 
     const { slotDurationMinutes, days } = req.body;
@@ -52,11 +100,11 @@ export const upsertMyAvailability = async (req, res) => {
   }
 };
 
-// helper: turn "09:00" + date into Date
+// helper: turn "09:00" + date into Date (LOCAL time)
 const buildDateTime = (dateStr, timeStr) => {
   const [h, m] = timeStr.split(":").map(Number);
   const base = new Date(dateStr);
-  base.setUTCHours(h, m, 0, 0);
+  base.setHours(h, m, 0, 0); // local hours
   return base;
 };
 
@@ -68,7 +116,9 @@ export const getDoctorAvailabilityForDate = async (req, res) => {
     const { date } = req.query;
 
     if (!date) {
-      return res.status(400).json({ message: "date query param is required" });
+      return res
+        .status(400)
+        .json({ message: "date query param is required" });
     }
 
     const dayDate = new Date(date);
@@ -76,7 +126,7 @@ export const getDoctorAvailabilityForDate = async (req, res) => {
       return res.status(400).json({ message: "Invalid date format" });
     }
 
-    const dayOfWeek = dayDate.getUTCDay();
+    const dayOfWeek = dayDate.getDay(); // local day-of-week
 
     const availability = await DoctorAvailability.findOne({ doctor: id });
     if (!availability) {
@@ -92,11 +142,11 @@ export const getDoctorAvailabilityForDate = async (req, res) => {
 
     const slotDuration = availability.slotDurationMinutes || 30;
 
-    // fetch existing appointments for that doctor on that day
+    // fetch existing appointments for that doctor on that day (LOCAL day range)
     const dayStart = new Date(date);
-    dayStart.setUTCHours(0, 0, 0, 0);
+    dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(dayStart);
-    dayEnd.setUTCHours(23, 59, 59, 999);
+    dayEnd.setHours(23, 59, 59, 999);
 
     const existing = await Appointment.find({
       doctor: id,

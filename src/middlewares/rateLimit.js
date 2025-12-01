@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 
 export const createRateLimiter = (windowMs, maxRequests) => {
   return rateLimit({
-    windowMs, // ms
+    windowMs,
     max: maxRequests,
     message: {
       message: `Too many requests. Try again in ${Math.round(windowMs / 60000)} minutes.`,
@@ -20,7 +20,7 @@ export const createRateLimiter = (windowMs, maxRequests) => {
   });
 };
 
-// Specific limits
-export const authLimiter = createRateLimiter(15 * 60 * 1000, 10);     // 10 requests per 15 min
-export const chatLimiter = createRateLimiter(15 * 60 * 1000, 50);     // 50 requests per 15 min
-export const visionLimiter = createRateLimiter(15 * 60 * 1000, 10);   // 10 requests per 15 min (expensive)
+// For local dev you can keep these high:
+export const authLimiter  = createRateLimiter(15 * 60 * 1000, 100);   // was 10
+export const chatLimiter  = createRateLimiter(15 * 60 * 1000, 1000);  // was 50
+export const visionLimiter = createRateLimiter(15 * 60 * 1000, 50);   // a bit higher
